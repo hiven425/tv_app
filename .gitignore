@@ -1,0 +1,39 @@
+.ace-tool/
+
+# Built application files
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+release/
+
+# Gradle
+.gradle/
+build/
+captures/
+local.properties
+
+# Logs
+*.log
+.navigation/
+
+# IntelliJ / Android Studio
+*.iml
+.idea/
+
+# Keystore files
+*.jks
+*.keystore
+
+# Native build folder
+.cxx/
+
+# OS
+.DS_Store
+Thumbs.db

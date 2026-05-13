@@ -1,0 +1,10 @@
+<resources>
+    <color name="tv_bg">#0F1115</color>
+    <color name="tv_bg_alt">#1A1D24</color>
+    <color name="tv_text_primary">#FFFFFFFF</color>
+    <color name="tv_text_secondary">#B0B7C3</color>
+    <color name="tv_accent">#3DA9FC</color>
+    <color name="tv_accent_dim">#264E72</color>
+    <color name="tv_ok">#34C759</color>
+    <color name="tv_warn">#FF9F0A</color>
+</resources>

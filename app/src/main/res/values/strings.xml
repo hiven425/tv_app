@@ -1,0 +1,32 @@
+<resources>
+    <string name="app_name">TV Cast</string>
+    <string name="device_default_name">Sony TV Cast</string>
+    <string name="status_ready">就绪 · 等待手机连接</string>
+    <string name="status_dlna">DLNA</string>
+    <string name="status_airplay">AirPlay</string>
+    <string name="status_cast">Cast</string>
+    <string name="status_dial">DIAL</string>
+    <string name="label_ip">电视 IP</string>
+    <string name="label_device_name">设备名</string>
+    <string name="label_scan_hint">用手机扫码或在投屏列表中选择此设备</string>
+    <string name="label_active_sender">来自：%1$s</string>
+    <string name="label_history">最近连接</string>
+    <string name="label_settings">设置</string>
+    <string name="label_settings_hint">按遥控器菜单键打开</string>
+    <string name="action_pause">暂停</string>
+    <string name="action_stop">停止</string>
+    <string name="notif_channel_name">投屏服务</string>
+    <string name="notif_channel_desc">保持投屏接收器在后台运行</string>
+    <string name="notif_running">投屏服务运行中</string>
+    <string name="notif_running_desc">设备：%1$s · IP：%2$s</string>
+    <string name="settings_title">TV Cast 设置</string>
+    <string name="settings_device_name">设备名</string>
+    <string name="settings_dlna_enabled">DLNA 接收器</string>
+    <string name="settings_dlna_summary">让手机视频 App 内的"投屏"按钮看到本设备</string>
+    <string name="settings_airplay_enabled">AirPlay 接收器</string>
+    <string name="settings_airplay_summary">让 iPhone 控制中心 / Mac 投屏到本设备</string>
+    <string name="settings_dial_enabled">DIAL 接收器</string>
+    <string name="settings_dial_summary">允许从 YouTube / Netflix 等应用投屏</string>
+    <string name="settings_cast_advertise">Google Cast 公告</string>
+    <string name="settings_cast_summary">在 Chrome 投屏列表中显示（v0.3 仅可见，不可控）</string>
+</resources>
