@@ -42,6 +42,7 @@ class DialServer(
         private const val TAG = "DialServer"
         // Apps we advertise as "installed" — the TV will report these to phones for the launch UI.
         private val KNOWN_APPS = listOf("YouTube", "Netflix", "Spotify", "AmazonInstantVideo")
+        private val APP_PATH_REGEX = Regex("^/apps/([A-Za-z0-9_]+)(?:/run)?/?$")
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -237,8 +238,4 @@ class DialServer(
     private fun String.xmlEscape(): String = this
         .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
         .replace("\"", "&quot;").replace("'", "&apos;")
-
-    private companion object {
-        private val APP_PATH_REGEX = Regex("^/apps/([A-Za-z0-9_]+)(?:/run)?/?$")
-    }
 }
