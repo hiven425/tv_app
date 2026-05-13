@@ -1,5 +1,7 @@
 package com.tvcast.app.dlna
 
+import com.tvcast.app.util.xmlEscape
+
 /** UPnP MediaRenderer XML descriptors. Kept minimal but compliant with UPnP/AV 1.0. */
 object UpnpDescriptors {
 
@@ -234,10 +236,3 @@ object UpnpDescriptors {
         "http-get:*:image/png:*," +
         "http-get:*:image/gif:*"
 }
-
-internal fun String.xmlEscape(): String = this
-    .replace("&", "&amp;")
-    .replace("<", "&lt;")
-    .replace(">", "&gt;")
-    .replace("\"", "&quot;")
-    .replace("'", "&apos;")

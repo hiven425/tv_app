@@ -82,7 +82,7 @@ sealed class CastEvent {
     data class SenderDisconnected(val source: Source) : CastEvent()
     data class StatusMessage(val text: String) : CastEvent()
 
-    enum class Source { DLNA, AIRPLAY, CAST, DIAL }
+    enum class Source { DLNA, AIRPLAY, CAST, DIAL, WEBUI }
     enum class ControlAction { PLAY, PAUSE, STOP, SEEK }
 }
 

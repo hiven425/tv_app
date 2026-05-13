@@ -75,6 +75,7 @@ class CastService : LifecycleService() {
     private var audioManager: AudioManager? = null
     private var connectivityManager: ConnectivityManager? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    private var pendingNetworkBounce: kotlinx.coroutines.Job? = null
     private var screenReceiver: BroadcastReceiver? = null
     private var wakeLock: PowerManager.WakeLock? = null
     @Volatile private var started = false
@@ -198,36 +199,37 @@ class CastService : LifecycleService() {
             .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
             .build()
         val cb = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                lifecycleScope.launch { handleNetworkChanged() }
-            }
-            override fun onLost(network: Network) {
-                lifecycleScope.launch { handleNetworkChanged() }
-            }
-            override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
-                lifecycleScope.launch { handleNetworkChanged() }
-            }
+            override fun onAvailable(network: Network) = scheduleNetworkBounce()
+            override fun onLost(network: Network) = scheduleNetworkBounce()
+            override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) =
+                scheduleNetworkBounce()
         }
         networkCallback = cb
         runCatching { cm.registerNetworkCallback(request, cb) }
     }
 
-    private suspend fun handleNetworkChanged() {
-        // Debounce: ConnectivityManager can fire several callbacks back-to-back during a Wi-Fi reconnect.
-        kotlinx.coroutines.delay(750)
-        val newIp = NetworkUtils.getLocalIpv4()
-        if (newIp == lastKnownIp) return
-        android.util.Log.i("CastService", "Network changed: $lastKnownIp → $newIp; bouncing receivers")
-        lastKnownIp = newIp
-        // Stop everything and start back up with the new IP baked into mDNS / SSDP advertisements.
-        runCatching { dial.stop() }; dialRunning = false
-        runCatching { airplay.stop() }; airplayRunning = false
-        runCatching { dlna.stop() }; dlnaRunning = false
-        applyReceiverFlags(
-            dlnaOn = settings.dlnaEnabled.value,
-            airplayOn = settings.airplayEnabled.value,
-            dialOn = settings.dialEnabled.value,
-        )
+    /**
+     * Coalesce ConnectivityManager callbacks (onAvailable/onLost/onCapabilitiesChanged can all fire
+     * back-to-back during a Wi-Fi reconnect) into a single bounce: cancel any pending bounce and
+     * arm a fresh 750 ms delay. Receivers only get restarted once per quiescent window.
+     */
+    private fun scheduleNetworkBounce() {
+        pendingNetworkBounce?.cancel()
+        pendingNetworkBounce = lifecycleScope.launch {
+            kotlinx.coroutines.delay(750)
+            val newIp = NetworkUtils.getLocalIpv4()
+            if (newIp == lastKnownIp) return@launch
+            android.util.Log.i("CastService", "Network changed: $lastKnownIp → $newIp; bouncing receivers")
+            lastKnownIp = newIp
+            runCatching { dial.stop() }; dialRunning = false
+            runCatching { airplay.stop() }; airplayRunning = false
+            runCatching { dlna.stop() }; dlnaRunning = false
+            applyReceiverFlags(
+                dlnaOn = settings.dlnaEnabled.value,
+                airplayOn = settings.airplayEnabled.value,
+                dialOn = settings.dialEnabled.value,
+            )
+        }
     }
 
     private fun applyReceiverFlags(dlnaOn: Boolean, airplayOn: Boolean, dialOn: Boolean) {
@@ -242,6 +244,7 @@ class CastService : LifecycleService() {
     private fun shutdown() {
         if (!started) return
         started = false
+        pendingNetworkBounce?.cancel(); pendingNetworkBounce = null
         networkCallback?.let { runCatching { connectivityManager?.unregisterNetworkCallback(it) } }
         networkCallback = null
         screenReceiver?.let { runCatching { unregisterReceiver(it) } }

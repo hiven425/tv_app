@@ -4,6 +4,7 @@ import android.util.Log
 import com.tvcast.app.event.CastEvent
 import com.tvcast.app.event.CastEventBus
 import com.tvcast.app.util.NetworkUtils
+import com.tvcast.app.util.xmlEscape
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -234,8 +235,4 @@ class DialServer(
             try { out.write(body) } catch (_: IOException) {}
         }
     }
-
-    private fun String.xmlEscape(): String = this
-        .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        .replace("\"", "&quot;").replace("'", "&apos;")
 }

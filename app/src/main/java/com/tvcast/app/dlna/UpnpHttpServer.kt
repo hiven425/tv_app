@@ -3,6 +3,7 @@ package com.tvcast.app.dlna
 import android.util.Log
 import com.tvcast.app.event.CastEvent
 import com.tvcast.app.event.CastEventBus
+import com.tvcast.app.util.xmlEscape
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -231,21 +232,23 @@ document.getElementById('f').addEventListener('submit', async (e) => {
         val params = String(req.body, Charsets.UTF_8).split('&')
             .mapNotNull {
                 val eq = it.indexOf('='); if (eq <= 0) return@mapNotNull null
-                val k = java.net.URLDecoder.decode(it.substring(0, eq), "UTF-8")
-                val v = java.net.URLDecoder.decode(it.substring(eq + 1), "UTF-8")
-                k to v
+                runCatching {
+                    val k = java.net.URLDecoder.decode(it.substring(0, eq), "UTF-8")
+                    val v = java.net.URLDecoder.decode(it.substring(eq + 1), "UTF-8")
+                    k to v
+                }.getOrNull()
             }.toMap()
         val url = params["url"].orEmpty()
         if (url.isBlank()) {
-            writeStatus(out, 400, "Bad Request", emptyMap(), "missing url".toByteArray())
+            writeStatus(out, 400, "Bad Request", emptyMap(), "missing or malformed url".toByteArray())
             return
         }
         val sender = "WebUI · ${client.remoteSocketAddress}"
         state.setCurrent(url, MetadataParser.Meta(title = params["title"], raw = ""))
-        CastEventBus.tryEmit(CastEvent.SenderConnected(CastEvent.Source.DLNA, sender))
+        CastEventBus.tryEmit(CastEvent.SenderConnected(CastEvent.Source.WEBUI, sender))
         CastEventBus.tryEmit(
             CastEvent.PlayMedia(
-                source = CastEvent.Source.DLNA,
+                source = CastEvent.Source.WEBUI,
                 url = url,
                 mimeType = null,
                 title = params["title"]?.takeIf { it.isNotBlank() } ?: url.substringAfterLast('/'),

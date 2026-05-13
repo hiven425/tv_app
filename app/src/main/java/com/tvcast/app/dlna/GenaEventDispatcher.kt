@@ -1,6 +1,7 @@
 package com.tvcast.app.dlna
 
 import android.util.Log
+import com.tvcast.app.util.xmlEscape
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
