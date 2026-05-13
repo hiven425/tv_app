@@ -99,7 +99,10 @@ class RaopAudioReceiver(private val context: Context) {
         val decoder = alacDecoder
         jobs += scope.launch {
             val buf = ByteArray(8192)
-            val pcm = ShortArray(decoder?.maxOutputSamples() ?: 4096)
+            // ALAC writes interleaved L/R samples — capacity must be frameLength * numChannels.
+            val pcmCapacity = decoder?.let { it.maxOutputSamples() * it.config.numChannels.coerceAtLeast(1) }
+                ?: 4096
+            val pcm = ShortArray(pcmCapacity)
             while (isActive) {
                 try {
                     val pkt = DatagramPacket(buf, buf.size)

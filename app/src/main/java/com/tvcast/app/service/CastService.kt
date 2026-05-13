@@ -262,7 +262,11 @@ class CastService : LifecycleService() {
 
     private fun observeEvents() {
         lifecycleScope.launch {
-            CastEventBus.events.collectLatest { ev ->
+            // Use collect (not collectLatest) on the events SharedFlow: handlers like
+            // advancePlaylist() and applyVolume() must run to completion even when another
+            // event arrives right after, otherwise we drop playlist advancement or volume
+            // updates during rapid sender activity.
+            CastEventBus.events.collect { ev ->
                 when (ev) {
                     is CastEvent.Volume -> applyVolume(ev.level)
                     is CastEvent.Control -> updateSessionState(ev.action)

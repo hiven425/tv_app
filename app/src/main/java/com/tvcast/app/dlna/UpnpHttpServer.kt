@@ -43,6 +43,9 @@ class UpnpHttpServer(
     companion object {
         private const val TAG = "UpnpHttpServer"
         private const val SOAP_ENV = "http://schemas.xmlsoap.org/soap/envelope/"
+        private const val URN_AVT = "urn:schemas-upnp-org:service:AVTransport:1"
+        private const val URN_RCS = "urn:schemas-upnp-org:service:RenderingControl:1"
+        private const val URN_CM = "urn:schemas-upnp-org:service:ConnectionManager:1"
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -276,6 +279,7 @@ document.getElementById('f').addEventListener('submit', async (e) => {
     }
 
     private fun handleAvTransport(out: OutputStream, client: Socket, action: String, args: Map<String, String>) {
+        fun ok(act: String, outArgs: Map<String, String>) = soapOk(out, URN_AVT, act, outArgs)
         when (action) {
             "SetAVTransportURI" -> {
                 val uri = args["CurrentURI"].orEmpty()
@@ -296,28 +300,28 @@ document.getElementById('f').addEventListener('submit', async (e) => {
                     )
                 )
                 events.notifyAv(state)
-                soapOk(out, "SetAVTransportURI", emptyMap())
+                ok("SetAVTransportURI", emptyMap())
             }
             "SetNextAVTransportURI" -> {
                 val uri = args["NextURI"].orEmpty()
                 val meta = MetadataParser.parse(args["NextURIMetaData"].orEmpty())
                 state.setNext(uri, meta)
-                soapOk(out, "SetNextAVTransportURI", emptyMap())
+                ok("SetNextAVTransportURI", emptyMap())
             }
-            "Play" -> { state.transportState = "PLAYING"; CastEventBus.tryEmit(CastEvent.Control(CastEvent.Source.DLNA, CastEvent.ControlAction.PLAY)); events.notifyAv(state); soapOk(out, "Play", emptyMap()) }
-            "Pause" -> { state.transportState = "PAUSED_PLAYBACK"; CastEventBus.tryEmit(CastEvent.Control(CastEvent.Source.DLNA, CastEvent.ControlAction.PAUSE)); events.notifyAv(state); soapOk(out, "Pause", emptyMap()) }
+            "Play" -> { state.transportState = "PLAYING"; CastEventBus.tryEmit(CastEvent.Control(CastEvent.Source.DLNA, CastEvent.ControlAction.PLAY)); events.notifyAv(state); ok("Play", emptyMap()) }
+            "Pause" -> { state.transportState = "PAUSED_PLAYBACK"; CastEventBus.tryEmit(CastEvent.Control(CastEvent.Source.DLNA, CastEvent.ControlAction.PAUSE)); events.notifyAv(state); ok("Pause", emptyMap()) }
             "Stop" -> {
                 state.transportState = "STOPPED"
                 CastEventBus.tryEmit(CastEvent.Control(CastEvent.Source.DLNA, CastEvent.ControlAction.STOP))
                 CastEventBus.tryEmit(CastEvent.SenderDisconnected(CastEvent.Source.DLNA))
-                events.notifyAv(state); soapOk(out, "Stop", emptyMap())
+                events.notifyAv(state); ok("Stop", emptyMap())
             }
             "Seek" -> {
                 val target = args["Target"].orEmpty()
                 state.seekTarget = target
                 val secs = parseTimeToSeconds(target)
                 CastEventBus.tryEmit(CastEvent.Control(CastEvent.Source.DLNA, CastEvent.ControlAction.SEEK, secs))
-                soapOk(out, "Seek", emptyMap())
+                ok("Seek", emptyMap())
             }
             "GetPositionInfo" -> {
                 val posMs = CastEventBus.positionMs.value
@@ -326,7 +330,7 @@ document.getElementById('f').addEventListener('submit', async (e) => {
                 val durStr = formatHms(durMs)
                 state.position = posStr
                 if (durMs > 0) state.duration = durStr
-                soapOk(out, "GetPositionInfo", mapOf(
+                ok("GetPositionInfo", mapOf(
                     "Track" to "1",
                     "TrackDuration" to durStr,
                     "TrackMetaData" to state.metadataXml,
@@ -337,7 +341,7 @@ document.getElementById('f').addEventListener('submit', async (e) => {
                     "AbsCount" to "0",
                 ))
             }
-            "GetTransportInfo" -> soapOk(out, "GetTransportInfo", mapOf(
+            "GetTransportInfo" -> ok("GetTransportInfo", mapOf(
                 "CurrentTransportState" to state.transportState,
                 "CurrentTransportStatus" to "OK",
                 "CurrentSpeed" to "1",
@@ -345,13 +349,13 @@ document.getElementById('f').addEventListener('submit', async (e) => {
             "GetMediaInfo" -> {
                 val durStr = formatHms(CastEventBus.durationMs.value)
                 if (CastEventBus.durationMs.value > 0) state.duration = durStr
-                soapOk(out, "GetMediaInfo", mapOf(
+                ok("GetMediaInfo", mapOf(
                     "NrTracks" to "1",
                     "MediaDuration" to durStr,
                     "CurrentURI" to state.currentUri,
                     "CurrentURIMetaData" to state.metadataXml,
-                    "NextURI" to "",
-                    "NextURIMetaData" to "",
+                    "NextURI" to state.nextUri,
+                    "NextURIMetaData" to state.nextMetadataXml,
                     "PlayMedium" to "NETWORK",
                     "RecordMedium" to "NOT_IMPLEMENTED",
                     "WriteStatus" to "NOT_IMPLEMENTED",
@@ -362,17 +366,18 @@ document.getElementById('f').addEventListener('submit', async (e) => {
     }
 
     private fun handleRenderingControl(out: OutputStream, action: String, args: Map<String, String>) {
+        fun ok(act: String, outArgs: Map<String, String>) = soapOk(out, URN_RCS, act, outArgs)
         when (action) {
-            "GetVolume" -> soapOk(out, "GetVolume", mapOf("CurrentVolume" to state.volume.toString()))
+            "GetVolume" -> ok("GetVolume", mapOf("CurrentVolume" to state.volume.toString()))
             "SetVolume" -> {
                 state.volume = args["DesiredVolume"]?.toIntOrNull()?.coerceIn(0, 100) ?: state.volume
                 CastEventBus.tryEmit(CastEvent.Volume(CastEvent.Source.DLNA, state.volume / 100f))
-                soapOk(out, "SetVolume", emptyMap())
+                ok("SetVolume", emptyMap())
             }
-            "GetMute" -> soapOk(out, "GetMute", mapOf("CurrentMute" to if (state.muted) "1" else "0"))
+            "GetMute" -> ok("GetMute", mapOf("CurrentMute" to if (state.muted) "1" else "0"))
             "SetMute" -> {
                 state.muted = (args["DesiredMute"] == "1" || args["DesiredMute"]?.equals("true", true) == true)
-                soapOk(out, "SetMute", emptyMap())
+                ok("SetMute", emptyMap())
             }
             else -> soapFault(out, "Unsupported action: $action")
         }
@@ -380,7 +385,7 @@ document.getElementById('f').addEventListener('submit', async (e) => {
 
     private fun handleConnectionManager(out: OutputStream, action: String) {
         when (action) {
-            "GetProtocolInfo" -> soapOk(out, "GetProtocolInfo", mapOf(
+            "GetProtocolInfo" -> soapOk(out, URN_CM, "GetProtocolInfo", mapOf(
                 "Source" to "",
                 "Sink" to UpnpDescriptors.SINK_PROTOCOL_INFO,
             ))
@@ -452,12 +457,12 @@ document.getElementById('f').addEventListener('submit', async (e) => {
         writeStatus(out, 200, "OK", mapOf("Content-Type" to "text/xml; charset=\"utf-8\""), if (headOnly) null else body, declaredLength = body.size)
     }
 
-    private fun soapOk(out: OutputStream, action: String, outArgs: Map<String, String>) {
+    private fun soapOk(out: OutputStream, serviceUrn: String, action: String, outArgs: Map<String, String>) {
         val args = outArgs.entries.joinToString("") { (k, v) -> "<$k>${v.xmlEscape()}</$k>" }
         val body = """<?xml version="1.0" encoding="utf-8"?>
 <s:Envelope xmlns:s="$SOAP_ENV" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
  <s:Body>
-  <u:${action}Response xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">$args</u:${action}Response>
+  <u:${action}Response xmlns:u="$serviceUrn">$args</u:${action}Response>
  </s:Body>
 </s:Envelope>""".toByteArray(Charsets.UTF_8)
         writeStatus(out, 200, "OK", mapOf("Content-Type" to "text/xml; charset=\"utf-8\"", "EXT" to ""), body)
